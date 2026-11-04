@@ -16,3 +16,8 @@ app:
     expiration-ms: 3600000
   upload:
     dir: build/test-uploads
+
+cloudflare:
+  turnstile:
+    enabled: false
+    allow-dev-bypass: true

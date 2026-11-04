@@ -27,10 +27,17 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<User>> register(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         log.info("REST request to register user: {}", request.getEmail());
-        User user = authService.register(request.getEmail(), request.getPassword(), "New User", "USER");
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Đăng ký thành công", user));
+        AuthResponse response = authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Đăng ký thành công", response));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@Valid @RequestBody GoogleAuthRequest request) {
+        log.info("REST request to login/register via Google OAuth: {}", request.getEmail());
+        AuthResponse response = authService.googleLogin(request);
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập Google thành công", response));
     }
 
     @GetMapping("/me")

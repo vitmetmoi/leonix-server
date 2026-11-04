@@ -18,3 +18,7 @@ logging:
     com.example.myapp: DEBUG
     org.springframework.web: INFO
     org.springframework.security: DEBUG
+
+cloudflare:
+  turnstile:
+    allow-dev-bypass: true

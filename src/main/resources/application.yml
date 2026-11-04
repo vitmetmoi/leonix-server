@@ -7,6 +7,17 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: 8080
@@ -19,3 +30,28 @@ app:
     expiration-ms: 86400000 # 24 hours
   upload:
     dir: uploads
+
+cloudflare:
+  turnstile:
+    enabled: ${CHATBOT_TURNSTILE_ENABLED:true}
+    secret-key: ${CLOUDFLARE_TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA}
+    siteverify-url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+    allow-dev-bypass: ${TURNSTILE_ALLOW_DEV_BYPASS:false}
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:}
+  client-secret: ${GOOGLE_CLIENT_SECRET:}
+  scope: openid, profile, email
+  redirect-uri: "{baseUrl}/api/auth/oauth2/callback/{registrationId}"
+
+mail:
+  host: ${MAIL_HOST:smtp.gmail.com}
+  port: ${MAIL_PORT:587}
+  username: ${MAIL_USERNAME:}
+  password: ${MAIL_PASSWORD:}
+  properties:
+    mail:
+      smtp:
+        auth: true
+        starttls:
+          enable: true

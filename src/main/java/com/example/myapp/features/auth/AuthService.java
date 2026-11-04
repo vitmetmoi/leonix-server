@@ -7,6 +7,8 @@ import java.util.List;
 public interface AuthService {
     AuthResponse login(LoginRequest request);
     User register(String email, String password, String fullName, String role);
+    AuthResponse register(RegisterRequest request);
+    AuthResponse googleLogin(GoogleAuthRequest request);
     User getCurrentUser();
     UserProfileResponse getProfile(User user);
     DashboardStatsResponse getDashboardStats(User user);

@@ -16,4 +16,11 @@ public class LoginRequest {
 
     @NotBlank(message = "Password is required")
     private String password;
+
+    private String turnstileToken;
+
+    public LoginRequest(String email, String password) {
+        this.email = email;
+        this.password = password;
+    }
 }

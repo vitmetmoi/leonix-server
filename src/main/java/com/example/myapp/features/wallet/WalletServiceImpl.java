@@ -47,7 +47,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public WalletResponse getWalletResponse(User user) {
         Wallet wallet = getOrCreateWallet(user);
         return WalletResponse.builder()
@@ -230,7 +230,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<TransactionResponse> listTransactions(User user, Pageable pageable) {
         Wallet wallet = getOrCreateWallet(user);
         return walletTransactionRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable)
