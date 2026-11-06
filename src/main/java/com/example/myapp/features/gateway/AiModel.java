@@ -1,5 +1,7 @@
 package com.example.myapp.features.gateway;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,6 +18,7 @@ import java.util.List;
 @Builder
 @ToString(exclude = {"capabilitiesList", "pricingList"})
 @EqualsAndHashCode(of = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AiModel {
 
     @Id
@@ -46,10 +49,12 @@ public class AiModel {
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;
 
+    @JsonIgnore
     @Builder.Default
     @OneToMany(mappedBy = "model", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiCapability> capabilitiesList = new ArrayList<>();
 
+    @JsonIgnore
     @Builder.Default
     @OneToMany(mappedBy = "model", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AiModelPricing> pricingList = new ArrayList<>();

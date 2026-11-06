@@ -80,22 +80,58 @@ public class AdminController {
     }
 
     @GetMapping("/models")
-    public ResponseEntity<ApiResponse<List<AiModel>>> listModels() {
+    public ResponseEntity<ApiResponse<List<AdminModelResponse>>> listModels() {
         return ResponseEntity.ok(ApiResponse.success(adminService.listModels()));
     }
 
-    @PutMapping("/models/{id}/toggle-status")
-    public ResponseEntity<ApiResponse<Void>> toggleModelStatus(
-            @PathVariable String id,
-            @RequestBody Map<String, Boolean> body
+    @PostMapping("/models")
+    public ResponseEntity<ApiResponse<AdminModelResponse>> saveModel(@Valid @RequestBody AdminModelRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.saveModel(request)));
+    }
+
+    @DeleteMapping("/models")
+    public ResponseEntity<ApiResponse<Void>> deleteModel(@RequestParam String id) {
+        adminService.deleteModel(id);
+        return ResponseEntity.ok(ApiResponse.success("Xóa AI model thành công", null));
+    }
+
+    @PostMapping("/models/attach-cluster")
+    public ResponseEntity<ApiResponse<Void>> attachModelToCluster(
+            @RequestBody Map<String, Object> body
     ) {
-        adminService.toggleModelStatus(id, body.get("isActive"), body.get("isMaintenance"));
+        String modelId = (String) body.get("modelId");
+        Long dispatchGroupId = body.get("dispatchGroupId") != null ? Long.valueOf(body.get("dispatchGroupId").toString()) : null;
+        adminService.attachModelToCluster(modelId, dispatchGroupId);
+        return ResponseEntity.ok(ApiResponse.success("Gắn cụm điều phối cho model thành công", null));
+    }
+
+    @PutMapping("/models/toggle-status")
+    public ResponseEntity<ApiResponse<Void>> toggleModelStatus(
+            @RequestBody Map<String, Object> body
+    ) {
+        String modelId = (String) body.get("modelId");
+        Boolean isActive = (Boolean) body.get("isActive");
+        Boolean isMaintenance = (Boolean) body.get("isMaintenance");
+        adminService.toggleModelStatus(modelId, isActive, isMaintenance);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái model thành công", null));
     }
 
     @GetMapping("/dispatch-groups")
     public ResponseEntity<ApiResponse<List<AiDispatchGroup>>> listDispatchGroups() {
         return ResponseEntity.ok(ApiResponse.success(adminService.listDispatchGroups()));
+    }
+
+    @PostMapping("/dispatch-groups")
+    public ResponseEntity<ApiResponse<AiDispatchGroup>> saveDispatchGroup(
+            @Valid @RequestBody AdminDispatchGroupRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.saveDispatchGroup(request)));
+    }
+
+    @DeleteMapping("/dispatch-groups/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteDispatchGroup(@PathVariable Long id) {
+        adminService.deleteDispatchGroup(id);
+        return ResponseEntity.ok(ApiResponse.success("Xóa cụm điều phối thành công", null));
     }
 
     @PostMapping("/upstream-endpoints")
@@ -112,6 +148,12 @@ public class AdminController {
     ) {
         adminService.toggleUpstreamStatus(id, body.get("isActive"));
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái upstream node thành công", null));
+    }
+
+    @DeleteMapping("/upstream-endpoints/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteUpstreamEndpoint(@PathVariable Long id) {
+        adminService.deleteUpstreamEndpoint(id);
+        return ResponseEntity.ok(ApiResponse.success("Đã xóa upstream endpoint node thành công", null));
     }
 
     @GetMapping("/payments")
@@ -133,11 +175,22 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(adminService.listPricing()));
     }
 
+    @PostMapping("/pricing")
+    public ResponseEntity<ApiResponse<AiModelPricing>> savePricing(@Valid @RequestBody AdminPricingRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.savePricing(request)));
+    }
+
     @PutMapping("/pricing/{id}")
     public ResponseEntity<ApiResponse<AiModelPricing>> updatePricing(
             @PathVariable Long id,
             @RequestBody Map<String, BigDecimal> body
     ) {
         return ResponseEntity.ok(ApiResponse.success(adminService.updatePricing(id, body.get("sellPrice"), body.get("costPrice"))));
+    }
+
+    @DeleteMapping("/pricing/{id}")
+    public ResponseEntity<ApiResponse<Void>> deletePricing(@PathVariable Long id) {
+        adminService.deletePricing(id);
+        return ResponseEntity.ok(ApiResponse.success("Đã xóa cấu hình đơn giá thành công", null));
     }
 }

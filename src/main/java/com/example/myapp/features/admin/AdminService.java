@@ -17,13 +17,21 @@ public interface AdminService {
     List<AdminJobResponse> listJobs(String serviceType, String status, int page, int size);
     void cancelAndRefundJob(String jobUuid);
     void retryJob(String jobUuid);
-    List<AiModel> listModels();
+    List<AdminModelResponse> listModels();
+    AdminModelResponse saveModel(AdminModelRequest request);
+    void deleteModel(String id);
+    void attachModelToCluster(String modelId, Long dispatchGroupId);
     void toggleModelStatus(String modelId, Boolean isActive, Boolean isMaintenance);
     List<AiDispatchGroup> listDispatchGroups();
+    AiDispatchGroup saveDispatchGroup(AdminDispatchGroupRequest request);
+    void deleteDispatchGroup(Long id);
     AiUpstreamEndpoint saveUpstreamEndpoint(AdminUpstreamEndpointRequest request);
     void toggleUpstreamStatus(Long endpointId, Boolean isActive);
+    void deleteUpstreamEndpoint(Long id);
     List<AdminPaymentResponse> listPayments(int page, int size);
     void manualApprovePayment(String paymentId);
     List<AiModelPricing> listPricing();
+    AiModelPricing savePricing(AdminPricingRequest request);
     AiModelPricing updatePricing(Long id, BigDecimal sellPrice, BigDecimal costPrice);
+    void deletePricing(Long id);
 }

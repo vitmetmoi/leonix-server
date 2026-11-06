@@ -23,9 +23,10 @@ public class AiGatewayController {
         return ResponseEntity.ok(ApiResponse.success(models));
     }
 
-    @GetMapping("/models/{id}")
+    @GetMapping("/models/{*id}")
     public ResponseEntity<ApiResponse<AiModelDto>> getModel(@PathVariable String id) {
-        AiModelDto model = aiGatewayService.getModel(id);
+        String cleanId = id != null && id.startsWith("/") ? id.substring(1) : id;
+        AiModelDto model = aiGatewayService.getModel(cleanId);
         return ResponseEntity.ok(ApiResponse.success(model));
     }
 

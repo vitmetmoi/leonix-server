@@ -1,5 +1,7 @@
 package com.example.myapp.features.gateway;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,12 +19,14 @@ import java.time.LocalDateTime;
 @Builder
 @ToString(exclude = {"model", "dispatchGroup"})
 @EqualsAndHashCode(of = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AiCapability {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "model_id", nullable = false)
     private AiModel model;
@@ -42,6 +46,7 @@ public class AiCapability {
     @Column(name = "supported_aspect_ratios", length = 255)
     private String supportedAspectRatios; // e.g. "16:9,9:16,1:1"
 
+    @JsonIgnoreProperties({"upstreamEndpoints", "hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dispatch_group_id", nullable = false)
     private AiDispatchGroup dispatchGroup;

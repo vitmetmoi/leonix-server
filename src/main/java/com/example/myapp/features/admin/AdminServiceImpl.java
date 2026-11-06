@@ -31,6 +31,7 @@ public class AdminServiceImpl implements AdminService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final AiJobRepository aiJobRepository;
     private final AiModelRepository aiModelRepository;
+    private final AiCapabilityRepository capabilityRepository;
     private final AiDispatchGroupRepository dispatchGroupRepository;
     private final AiUpstreamEndpointRepository upstreamEndpointRepository;
     private final AiModelPricingRepository pricingRepository;
@@ -180,8 +181,113 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AiModel> listModels() {
-        return aiModelRepository.findAll();
+    public List<AdminModelResponse> listModels() {
+        List<AiModel> models = aiModelRepository.findAll(Sort.by(Sort.Direction.ASC, "displayOrder"));
+        List<AdminModelResponse> responses = new ArrayList<>();
+
+        for (AiModel m : models) {
+            List<AiCapability> caps = capabilityRepository.findByModelIdAndIsActiveTrue(m.getId());
+            List<AiModelPricing> pricing = pricingRepository.findByModelId(m.getId());
+
+            Long dgId = null;
+            String dgCode = null;
+            String dgName = null;
+            for (AiCapability cap : caps) {
+                if (cap.getDispatchGroup() != null) {
+                    dgId = cap.getDispatchGroup().getId();
+                    dgCode = cap.getDispatchGroup().getGroupCode();
+                    dgName = cap.getDispatchGroup().getName();
+                    break;
+                }
+            }
+
+            responses.add(AdminModelResponse.builder()
+                    .id(m.getId())
+                    .name(m.getName())
+                    .provider(m.getProvider())
+                    .serviceType(m.getServiceType())
+                    .capabilities(m.getCapabilities())
+                    .isActive(m.getIsActive())
+                    .isMaintenance(m.getIsMaintenance())
+                    .displayOrder(m.getDisplayOrder())
+                    .dispatchGroupId(dgId)
+                    .dispatchGroupCode(dgCode)
+                    .dispatchGroupName(dgName)
+                    .pricingCount(pricing.size())
+                    .createdAt(m.getCreatedAt())
+                    .updatedAt(m.getUpdatedAt())
+                    .build());
+        }
+        return responses;
+    }
+
+    @Override
+    @Transactional
+    public AdminModelResponse saveModel(AdminModelRequest request) {
+        String modelId = request.getId().trim();
+        AiModel model = aiModelRepository.findById(modelId).orElseGet(AiModel::new);
+        model.setId(modelId);
+        model.setName(request.getName().trim());
+        model.setProvider(request.getProvider().trim());
+        model.setServiceType(request.getServiceType().trim().toUpperCase());
+        model.setCapabilities(request.getCapabilities() != null && !request.getCapabilities().isBlank() ? request.getCapabilities().trim() : "{}");
+        model.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
+        model.setIsMaintenance(request.getIsMaintenance() != null ? request.getIsMaintenance() : false);
+        model.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0);
+
+        AiModel saved = aiModelRepository.save(model);
+
+        if (request.getDispatchGroupId() != null) {
+            attachModelToCluster(saved.getId(), request.getDispatchGroupId());
+        }
+
+        return listModels().stream()
+                .filter(m -> m.getId().equals(saved.getId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void deleteModel(String id) {
+        if (!aiModelRepository.existsById(id)) {
+            throw new ResourceNotFoundException("AiModel", "id", id);
+        }
+        List<AiCapability> caps = capabilityRepository.findByModelIdAndIsActiveTrue(id);
+        capabilityRepository.deleteAll(caps);
+
+        List<AiModelPricing> pricings = pricingRepository.findByModelId(id);
+        pricingRepository.deleteAll(pricings);
+
+        aiModelRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void attachModelToCluster(String modelId, Long dispatchGroupId) {
+        AiModel model = aiModelRepository.findById(modelId)
+                .orElseThrow(() -> new ResourceNotFoundException("AiModel", "id", modelId));
+        AiDispatchGroup dg = dispatchGroupRepository.findById(dispatchGroupId)
+                .orElseThrow(() -> new ResourceNotFoundException("AiDispatchGroup", "id", dispatchGroupId));
+
+        List<AiCapability> caps = capabilityRepository.findByModelIdAndIsActiveTrue(modelId);
+        if (caps.isEmpty()) {
+            String defaultCap = "VOICE".equalsIgnoreCase(model.getServiceType()) ? "tts"
+                    : "IMAGE".equalsIgnoreCase(model.getServiceType()) ? "t2i" : "t2v";
+            AiCapability newCap = AiCapability.builder()
+                    .model(model)
+                    .capabilityCode(defaultCap)
+                    .name(model.getName() + " Standard")
+                    .dispatchGroup(dg)
+                    .isActive(true)
+                    .build();
+            capabilityRepository.save(newCap);
+        } else {
+            for (AiCapability cap : caps) {
+                cap.setDispatchGroup(dg);
+                capabilityRepository.save(cap);
+            }
+        }
     }
 
     @Override
@@ -198,6 +304,36 @@ public class AdminServiceImpl implements AdminService {
     @Transactional(readOnly = true)
     public List<AiDispatchGroup> listDispatchGroups() {
         return dispatchGroupRepository.findAll();
+    }
+
+    @Override
+    @Transactional
+    public AiDispatchGroup saveDispatchGroup(AdminDispatchGroupRequest request) {
+        AiDispatchGroup group;
+        if (request.getId() != null) {
+            group = dispatchGroupRepository.findById(request.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("AiDispatchGroup", "id", request.getId()));
+        } else {
+            group = new AiDispatchGroup();
+        }
+
+        group.setGroupCode(request.getGroupCode().trim());
+        group.setName(request.getName().trim());
+        group.setStrategy(request.getStrategy() != null ? request.getStrategy() : "PRIORITY_FAILOVER");
+        group.setFailoverStatusCodes(request.getFailoverStatusCodes() != null ? request.getFailoverStatusCodes() : "429,500,502,503,504");
+        group.setMaxRetriesPerUpstream(request.getMaxRetriesPerUpstream() != null ? request.getMaxRetriesPerUpstream() : 1);
+        group.setTimeoutMs(request.getTimeoutMs() != null ? request.getTimeoutMs() : 30000);
+
+        return dispatchGroupRepository.save(group);
+    }
+
+    @Override
+    @Transactional
+    public void deleteDispatchGroup(Long id) {
+        if (!dispatchGroupRepository.existsById(id)) {
+            throw new ResourceNotFoundException("AiDispatchGroup", "id", id);
+        }
+        dispatchGroupRepository.deleteById(id);
     }
 
     @Override
@@ -239,6 +375,15 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("AiUpstreamEndpoint", "id", endpointId));
         endpoint.setIsActive(isActive);
         upstreamEndpointRepository.save(endpoint);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUpstreamEndpoint(Long id) {
+        if (!upstreamEndpointRepository.existsById(id)) {
+            throw new ResourceNotFoundException("AiUpstreamEndpoint", "id", id);
+        }
+        upstreamEndpointRepository.deleteById(id);
     }
 
     @Override
@@ -288,12 +433,46 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
+    public AiModelPricing savePricing(AdminPricingRequest request) {
+        AiModel model = aiModelRepository.findById(request.getModelId().trim())
+                .orElseThrow(() -> new ResourceNotFoundException("AiModel", "id", request.getModelId()));
+
+        AiModelPricing pricing;
+        if (request.getId() != null) {
+            pricing = pricingRepository.findById(request.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("AiModelPricing", "id", request.getId()));
+        } else {
+            pricing = new AiModelPricing();
+        }
+
+        pricing.setModel(model);
+        pricing.setCapabilityCode(request.getCapabilityCode().trim());
+        pricing.setResolution(request.getResolution() != null && !request.getResolution().isBlank() ? request.getResolution().trim() : null);
+        pricing.setDuration(request.getDuration() != null && !request.getDuration().isBlank() ? request.getDuration().trim() : null);
+        pricing.setPriceUnit(request.getPriceUnit() != null ? request.getPriceUnit().trim() : "PER_CALL");
+        pricing.setSellPrice(request.getSellPrice());
+        pricing.setCostPrice(request.getCostPrice());
+
+        return pricingRepository.save(pricing);
+    }
+
+    @Override
+    @Transactional
     public AiModelPricing updatePricing(Long id, BigDecimal sellPrice, BigDecimal costPrice) {
         AiModelPricing pricing = pricingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("AiModelPricing", "id", id));
         if (sellPrice != null) pricing.setSellPrice(sellPrice);
         if (costPrice != null) pricing.setCostPrice(costPrice);
         return pricingRepository.save(pricing);
+    }
+
+    @Override
+    @Transactional
+    public void deletePricing(Long id) {
+        if (!pricingRepository.existsById(id)) {
+            throw new ResourceNotFoundException("AiModelPricing", "id", id);
+        }
+        pricingRepository.deleteById(id);
     }
 
     private AdminJobResponse mapToAdminJob(AiJob j) {

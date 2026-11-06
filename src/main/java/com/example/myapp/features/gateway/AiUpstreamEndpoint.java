@@ -1,5 +1,8 @@
 package com.example.myapp.features.gateway;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,15 +17,23 @@ import java.time.LocalDateTime;
 @Builder
 @ToString(exclude = {"apiKeyEncrypted", "dispatchGroup"})
 @EqualsAndHashCode(of = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AiUpstreamEndpoint {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dispatch_group_id", nullable = false)
     private AiDispatchGroup dispatchGroup;
+
+    @Transient
+    @JsonProperty("dispatchGroupId")
+    public Long getDispatchGroupId() {
+        return dispatchGroup != null ? dispatchGroup.getId() : null;
+    }
 
     @Column(nullable = false, length = 150)
     private String name;

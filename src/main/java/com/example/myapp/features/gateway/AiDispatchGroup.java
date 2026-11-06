@@ -1,5 +1,6 @@
 package com.example.myapp.features.gateway;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,6 +17,7 @@ import java.util.List;
 @Builder
 @ToString(exclude = "upstreamEndpoints")
 @EqualsAndHashCode(of = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AiDispatchGroup {
 
     @Id
@@ -45,7 +47,7 @@ public class AiDispatchGroup {
     private Integer timeoutMs = 30000;
 
     @Builder.Default
-    @OneToMany(mappedBy = "dispatchGroup", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "dispatchGroup", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("priority ASC")
     private List<AiUpstreamEndpoint> upstreamEndpoints = new ArrayList<>();
 

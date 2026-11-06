@@ -1,5 +1,6 @@
 package com.example.myapp.features.gateway;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,13 +16,15 @@ import java.time.LocalDateTime;
 @Builder
 @ToString(exclude = "model")
 @EqualsAndHashCode(of = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AiModelPricing {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"capabilitiesList", "pricingList", "hibernateLazyInitializer", "handler"})
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "model_id", nullable = false)
     private AiModel model;
 
